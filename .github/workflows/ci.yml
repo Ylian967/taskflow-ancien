@@ -86,3 +86,45 @@ jobs:
 
       - name: Tests d'intégration (PostgreSQL)
         run: npm run test:int
+
+  front:
+    name: front
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Installer Node 20
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Format (Prettier)
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test:coverage
+
+      - name: Build (Vite)
+        run: npm run build
+
+      - name: Conserver le build (artefact front-dist)
+        uses: actions/upload-artifact@v7
+        with:
+          name: front-dist
+          # upload-artifact ignore working-directory : chemin depuis la racine.
+          path: front/dist/
+          retention-days: 7
+          if-no-files-found: error
