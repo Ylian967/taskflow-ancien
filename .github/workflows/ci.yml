@@ -13,6 +13,60 @@ jobs:
     name: api
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      # On garde le verdict des deux versions même si l'une échoue.
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Installer Node ${{ matrix.node }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Format (Prettier)
+        run: npm run format:check
+
+      - name: Tests unitaires et couverture
+        run: npm run test:coverage
+
+  api-integration:
+    name: api-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Base jetable, détruite à la fin du job : pas un secret.
+          POSTGRES_USER: taskflow
+          POSTGRES_PASSWORD: taskflow
+          POSTGRES_DB: taskflow
+        # Les steps tournent sur la VM, pas dans un conteneur : on publie le port.
+        ports:
+          - 5432:5432
+        # Le job n'attaque les steps qu'une fois la base prête (healthy), pas juste démarrée.
+        options: >-
+          --health-cmd "pg_isready -U taskflow -d taskflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://taskflow:taskflow@localhost:5432/taskflow
     defaults:
       run:
         working-directory: api
@@ -30,11 +84,5 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Lint (ESLint)
-        run: npm run lint
-
-      - name: Format (Prettier)
-        run: npm run format:check
-
-      - name: Tests unitaires et couverture
-        run: npm run test:coverage
+      - name: Tests d'intégration (PostgreSQL)
+        run: npm run test:int
