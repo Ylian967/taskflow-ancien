@@ -1,9 +1,20 @@
 name: CI
 
 on:
+  # Pas de filtre de chemins sur les PR : un job requis qui ne démarre pas
+  # laisse la PR bloquée sur « Expected — Waiting for status to be reported ».
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+# Un nouveau push sur une PR annule le run devenu inutile ;
+# sur main on n'annule jamais : chaque commit livrable garde son verdict.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
