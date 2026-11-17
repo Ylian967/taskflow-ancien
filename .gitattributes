@@ -1,0 +1,2 @@
+# Fins de ligne LF dans le dépot, quel que soit l OS (Prettier exige LF, la CI tourne sous Linux)
+* text=auto eol=lf
